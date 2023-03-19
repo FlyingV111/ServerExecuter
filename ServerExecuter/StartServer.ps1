@@ -64,19 +64,30 @@ $StartButton.Text = "Start"
 $StartButton.Name = "Start"
 #Die folgende Zeile ordnet dem Click-Event die Schließen-Funktion für das Formular zu
 $StartButton.Add_Click({
-    cd "E:\Order\AllServer\Minecraft Server\TestServer"
-    start run.bat
 
-
-
-    $extract = Select-String -Path "Log.txt" -Pattern "url=tcp:";
-    echo $extract
-    pause
 })
 $objForm.Controls.Add($StartButton)
 
 #[void] $objForm.ShowDialog()
 
-E:
-cd "E:\Order\AllServer\Minecraft-Server"  
-.\ngrok.exe tcp 25565 --region eu --log=stdout > .\Log.txt 2>&1;
+function startServer{
+    #Start Bat 
+    ServerSet-Location $serverPath
+    Start-Process run.bat
+}
+$serverPath = "E:\Order\AllServer\Minecraft-Server\TestServer"
+$batPath = "E:\Order\AllServer\Minecraft-Server\TestServer\run.bat"
+
+
+
+$ngrokJob = Start-Job -ScriptBlock {"start / $Using:serverPath\ngrok.exe tcp 25565 --region eu" |  cmd}
+sleep 2
+
+$url = (Invoke-WebRequest -UseBasicParsing -uri "http://localhost:4040/api/tunnels").Content
+$Json= ConvertFrom-Json -InputObject $url
+$url = $contentJson.tunnels.public_url
+$url = $url.trimStart("tcp://")
+$url
+
+Stop-Job -id $ngrokJob.Id
+Remove-Job -id $ngrokJob.Id
