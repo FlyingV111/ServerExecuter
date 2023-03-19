@@ -94,7 +94,7 @@ $StartButton.Add_Click({
     Write-Host $batName
     startServer
     if($checkbox.Checked){
-        startNgrok 
+         startNgrok 
     }
 })
 $objForm.Controls.Add($StartButton)
@@ -126,12 +126,11 @@ function startNgrok{
     $url
     $serverPath
 
-    $ngrokJob = Start-Job -ScriptBlock {"start $Using:serverPath\ngrok.exe tcp 25565 --region eu > /dev /null &" |  cmd}
+    $ngrokJob = Start-Job -ScriptBlock {"start $Using:serverPath\ngrok.exe tcp 25565 --region eu" |  cmd}
 
     sleep 2
 
     $url = (Invoke-WebRequest -UseBasicParsing -uri "http://localhost:4040/api/tunnels").Content
-    echo $url
     $Json= ConvertFrom-Json -InputObject $url
     $url = $Json.tunnels.public_url
     $url = $url.trimStart("tcp://")
