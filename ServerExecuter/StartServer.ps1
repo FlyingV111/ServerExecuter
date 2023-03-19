@@ -2,16 +2,9 @@ cls
 [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
 [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
 
-Add-Type @"
-using System.Windows.Forms;
-public class objForm : Form {
-    public string ServerPath { get; set; }
-}
-"@
-
 $iconPath = ".\server.ico"
 $folderPath = "Logo"
-$objForm.serverPath = ""
+$serverPath = ""
 $batName = ""
 
 $objForm = New-Object System.Windows.Forms.Form
@@ -43,21 +36,6 @@ $selectPath.Add_Click({
 })
 $objForm.Controls.Add($selectPath)
 
-$ApplyButtonPath = New-Object System.Windows.Forms.Button
-# Die nächsten beiden Zeilen legen die Position und die Größe des Buttons fest
-$ApplyButtonPath.Location = New-Object System.Drawing.Size(280,39)
-$ApplyButtonPath.Size = New-Object System.Drawing.Size(75,23)
-$ApplyButtonPath.Text = "Apply"
-$ApplyButtonPath.Name = "ApplyButtonPath"
-#Die folgende Zeile ordnet dem Click-Event die Schließen-Funktion für das Formular zu
-$ApplyButtonPath.Add_Click({
-    Write-Host "Server Path:"
-    $objForm.serverPath = $textBoxSelect.Text
-    Write-Host $objForm.serverPath
-})
-$objForm.Controls.Add($ApplyButtonPath)
-
-
 $objLabel = New-Object System.Windows.Forms.Label
 $objLabel.Location = New-Object System.Drawing.Size(20,79)
 $objLabel.Size = New-Object System.Drawing.Size(200,20)
@@ -83,19 +61,13 @@ $selectPathBat.Add_Click({
 })
 $objForm.Controls.Add($selectPathBat)
 
-$ApplyButtonBat = New-Object System.Windows.Forms.Button
-# Die nächsten beiden Zeilen legen die Position und die Größe des Buttons fest
-$ApplyButtonBat.Location = New-Object System.Drawing.Size(280,99)
-$ApplyButtonBat.Size = New-Object System.Drawing.Size(75,23)
-$ApplyButtonBat.Text = "Apply"
-$ApplyButtonBat.Name = "Apply"
-#Die folgende Zeile ordnet dem Click-Event die Schließen-Funktion für das Formular zu
-$ApplyButtonBat.Add_Click({
-    Write-Host "Bat Name:"
-    global:batName = $textBoxBat.Text
-    Write-Host $batName
-})
-$objForm.Controls.Add($ApplyButtonBat)
+
+$checkbox = New-Object System.Windows.Forms.CheckBox
+$checkbox.Location = New-Object System.Drawing.Point(20, 140)
+$checkbox.Text = "Online-Modus"
+$checkbox.Name = "OnlineMode"
+$objForm.Controls.Add($checkbox)
+
 
 $CancelButton = New-Object System.Windows.Forms.Button
 # Die nächsten beiden Zeilen legen die Position und die Größe des Buttons fest
@@ -116,36 +88,57 @@ $StartButton.Text = "Start"
 $StartButton.Name = "Start"
 #Die folgende Zeile ordnet dem Click-Event die Schließen-Funktion für das Formular zu
 $StartButton.Add_Click({
-    Write-Host "Path:"
-    Write-Host $objForm.serverPath
+    $batName = $textBoxBat.Text
+    $serverPath = $textBoxSelect.Text
+    Write-Host $serverPath
+    Write-Host $batName
     startServer
-    startNgrok
+    if($checkbox.Checked){
+        startNgrok 
+    }
 })
 $objForm.Controls.Add($StartButton)
+$ipLabel = New-Object System.Windows.Forms.Label
+$ipLabel.Location = New-Object System.Drawing.Size(280,425)
+$ipLabel.Size = New-Object System.Drawing.Size(200,20)
+
+$copyButton = New-Object System.Windows.Forms.Button
+$copyButton.Location = New-Object System.Drawing.Size(480,420)
+$copyButton.Size = New-Object System.Drawing.Size(75,23)
+$copyButton.Text = "Copy"
+$copyButton.Name = "Copy"
+
 
 [void] $objForm.ShowDialog()
 
 function startServer{
-    $objForm.serverPath
+    $serverPath
     $batName
 
     #Start Bat 
-    Set-Location $objForm.serverPath
+    Set-Location $serverPath
     Start-Process $batName
 }
 
 function startNgrok{
-$ngrokJob = Start-Job -ScriptBlock {"start $Using:serverPath\ngrok.exe tcp 25565 --region eu" |  cmd}
+    $copyButton.Site
+    $ipLabel
+    $url
+    $serverPath
 
-sleep 2
+    $ngrokJob = Start-Job -ScriptBlock {"start $Using:serverPath\ngrok.exe tcp 25565 --region eu > /dev /null &" |  cmd}
 
-$url = (Invoke-WebRequest -UseBasicParsing -uri "http://localhost:4040/api/tunnels").Content
-echo $url
-$Json= ConvertFrom-Json -InputObject $url
-$url = $Json.tunnels.public_url
-$url = $url.trimStart("tcp://")
-$url
+    sleep 2
 
-Stop-Job -id $ngrokJob.Id
-Remove-Job -id $ngrokJob.Id
+    $url = (Invoke-WebRequest -UseBasicParsing -uri "http://localhost:4040/api/tunnels").Content
+    echo $url
+    $Json= ConvertFrom-Json -InputObject $url
+    $url = $Json.tunnels.public_url
+    $url = $url.trimStart("tcp://")
+    $ipLabel.Text = "Ip-Adress:   " + $url
+    $objForm.Controls.Add($ipLabel)
+    $objForm.Controls.Add($copyButton)
+    $objForm.Activate()
+    Stop-Job -id $ngrokJob.Id
+    Remove-Job -id $ngrokJob.Id
 }
