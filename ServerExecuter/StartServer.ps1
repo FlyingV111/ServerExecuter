@@ -6,6 +6,7 @@ $iconPath = ".\server.ico"
 $folderPath = "Logo"
 $serverPath = ""
 $batName = ""
+$url = ""
 
 $objForm = New-Object System.Windows.Forms.Form
 $objForm.Text = "Server-Management"
@@ -77,7 +78,11 @@ $CancelButton.Text = "Abbrechen"
 $CancelButton.Name = "Abbrechen"
 $CancelButton.DialogResult = "Cancel"
 #Die folgende Zeile ordnet dem Click-Event die Schließen-Funktion für das Formular zu
-$CancelButton.Add_Click({$objForm.Close()})
+$CancelButton.Add_Click({
+    $objForm.Close()
+    Stop-Job -id $ngrokJob.Id
+    Remove-Job -id $ngrokJob.Id
+})
 $objForm.Controls.Add($CancelButton)
 
 $StartButton = New-Object System.Windows.Forms.Button
@@ -92,11 +97,24 @@ $StartButton.Add_Click({
     $serverPath = $textBoxSelect.Text
     Write-Host $serverPath
     Write-Host $batName
-    startServer
+    Set-Location $serverPath
+    Start-Process $batName
     if($checkbox.Checked){
-         startNgrok 
+        $ngrokJob = Start-Job -ScriptBlock {"start $Using:serverPath\ngrok.exe tcp 25565 --region eu" |  cmd}
+
+        sleep 2
+
+        $url = (Invoke-WebRequest -UseBasicParsing -uri "http://localhost:4040/api/tunnels").Content
+        $Json= ConvertFrom-Json -InputObject $url
+        $url = $Json.tunnels.public_url
+        $url = $url.trimStart("tcp://")
+        $ipLabel.Text = "Ip-Adress:   " + $url
+        $objForm.Controls.Add($ipLabel)
+        $objForm.Controls.Add($copyButton)
+        $objForm.Activate()
     }
 })
+
 $objForm.Controls.Add($StartButton)
 $ipLabel = New-Object System.Windows.Forms.Label
 $ipLabel.Location = New-Object System.Drawing.Size(280,425)
@@ -107,37 +125,19 @@ $copyButton.Location = New-Object System.Drawing.Size(480,420)
 $copyButton.Size = New-Object System.Drawing.Size(75,23)
 $copyButton.Text = "Copy"
 $copyButton.Name = "Copy"
+$copyButton.Add_Click({
+    $url = $ipLabel.Text.trimStart("Ip-Adress:   ")
+    Set-Clipboard -Value $url
+    $objForm.Controls.Add($copyiedLabel)
+    sleep 2
+    $objForm.Controls.Remove($copyiedLabel)
 
+})
+
+$copyiedLabel = New-Object System.Windows.Forms.Label
+$copyiedLabel.Location = New-Object System.Drawing.Size(350,400)
+$copyiedLabel.Size = New-Object System.Drawing.Size(200,20)
+$copyiedLabel.Text = "Copied to the clipboard."
+$copyiedLabel.ForeColor = "Green"
 
 [void] $objForm.ShowDialog()
-
-function startServer{
-    $serverPath
-    $batName
-
-    #Start Bat 
-    Set-Location $serverPath
-    Start-Process $batName
-}
-
-function startNgrok{
-    $copyButton.Site
-    $ipLabel
-    $url
-    $serverPath
-
-    $ngrokJob = Start-Job -ScriptBlock {"start $Using:serverPath\ngrok.exe tcp 25565 --region eu" |  cmd}
-
-    sleep 2
-
-    $url = (Invoke-WebRequest -UseBasicParsing -uri "http://localhost:4040/api/tunnels").Content
-    $Json= ConvertFrom-Json -InputObject $url
-    $url = $Json.tunnels.public_url
-    $url = $url.trimStart("tcp://")
-    $ipLabel.Text = "Ip-Adress:   " + $url
-    $objForm.Controls.Add($ipLabel)
-    $objForm.Controls.Add($copyButton)
-    $objForm.Activate()
-    Stop-Job -id $ngrokJob.Id
-    Remove-Job -id $ngrokJob.Id
-}
