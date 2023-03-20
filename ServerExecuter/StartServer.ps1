@@ -98,7 +98,8 @@ $StartButton.Add_Click({
     Write-Host $serverPath
     Write-Host $batName
     Set-Location $serverPath
-    Start-Process $batName
+    $global:minecraftServer = Start-Process $batName -passthru
+
     if($checkbox.Checked){
         $ngrokJob = Start-Job -ScriptBlock {"start $Using:serverPath\ngrok.exe tcp 25565 --region eu" |  cmd}
 
@@ -114,8 +115,27 @@ $StartButton.Add_Click({
         $objForm.Activate()
     }
 })
-
 $objForm.Controls.Add($StartButton)
+
+
+$StopButton = New-Object System.Windows.Forms.Button
+# Setting Position
+$StopButton.Location = New-Object System.Drawing.Size(595, 420)
+# Setting Size
+$StopButton.Size = New-Object System.Drawing.Size(75, 23)
+$StopButton.Text = "Stop"
+$StopButton.Name = "Stop"
+# Adding Click Event-Listener
+$StopButton.Add_Click({
+    # TODO: Add Exception Handling
+    Stop-Process -Id $global:minecraftServer.ID
+    # TODO: Stop-Process -Name "ngrok"
+})
+$objForm.Controls.Add($StopButton)
+
+# Simply shut down ngrok => Stop-Process -Name "ngrok" (all processes of ngrok will be stopped)
+# Getting PID's (Process ID) of started tasks (tasks because ngrok starts usually more than one task)
+
 $ipLabel = New-Object System.Windows.Forms.Label
 $ipLabel.Location = New-Object System.Drawing.Size(280,425)
 $ipLabel.Size = New-Object System.Drawing.Size(200,20)
