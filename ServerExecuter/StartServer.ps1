@@ -80,11 +80,10 @@ $CancelButton.DialogResult = "Cancel"
 #Die folgende Zeile ordnet dem Click-Event die Schließen-Funktion für das Formular zu
 $CancelButton.Add_Click({
     taskkill /F /IM ngrok.exe
+    Stop-Process -Id $global:minecraftServer.ID
     $objForm.Close()
     Stop-Job -id $global:ngrokJob.Id
     Remove-Job -id $global:ngrokJob.Id
-    Stop-Job -id $global:batJob.Id
-    Remove-Job -id $global:batJob.Id
 })
 $objForm.Controls.Add($CancelButton)
 
@@ -98,11 +97,16 @@ $StartButton.Name = "Start"
 $StartButton.Add_Click({
     $batName = $textBoxBat.Text
     $serverPath = $textBoxSelect.Text
+    Write-Host $serverPath
+    Write-Host $batName
     Set-Location $serverPath
-    Start-Process $batName  
+    $global:minecraftServer = Start-Process $batName -passthru
+
     if($checkbox.Checked){
-       $global:ngrokJob = Start-Job -ScriptBlock {"start $Using:serverPath\ngrok.exe tcp 25565 --region eu" |  cmd}
+        $global:ngrokJob = Start-Job -ScriptBlock {"start $Using:serverPath\ngrok.exe tcp 25565 --region eu" |  cmd}
+
         sleep 2
+
         $url = (Invoke-WebRequest -UseBasicParsing -uri "http://localhost:4040/api/tunnels").Content
         $Json= ConvertFrom-Json -InputObject $url
         $url = $Json.tunnels.public_url
@@ -113,8 +117,27 @@ $StartButton.Add_Click({
         $objForm.Activate()
     }
 })
-
 $objForm.Controls.Add($StartButton)
+
+
+$StopButton = New-Object System.Windows.Forms.Button
+# Setting Position
+$StopButton.Location = New-Object System.Drawing.Size(595, 420)
+# Setting Size
+$StopButton.Size = New-Object System.Drawing.Size(75, 23)
+$StopButton.Text = "Stop"
+$StopButton.Name = "Stop"
+# Adding Click Event-Listener
+$StopButton.Add_Click({
+    # TODO: Add Exception Handling
+    Stop-Process -Id $global:minecraftServer.Id
+    # TODO: Stop-Process -Name "ngrok"
+})
+$objForm.Controls.Add($StopButton)
+
+# Simply shut down ngrok => Stop-Process -Name "ngrok" (all processes of ngrok will be stopped)
+# Getting PID's (Process ID) of started tasks (tasks because ngrok starts usually more than one task)
+
 $ipLabel = New-Object System.Windows.Forms.Label
 $ipLabel.Location = New-Object System.Drawing.Size(280,425)
 $ipLabel.Size = New-Object System.Drawing.Size(200,20)
