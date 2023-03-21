@@ -105,6 +105,7 @@ $StartButton.Add_Click({
     Set-Location $serverPath
     
     if($checkbox.Checked){
+        Write-Host "Currently here"
         $global:ngrokJob = Start-Job -ScriptBlock {"start $Using:serverPath\ngrok.exe tcp 25565 --region eu" |  cmd}
 
         Start-Sleep 2
@@ -134,7 +135,7 @@ $StopButton.Add_Click({
     # Check whether process is still running (=> Exception Handling)
     checkProcessAndStop -ProcessId $global:minecraftServer.Id
     
-    # TODO: Stop-Process -Name "ngrok"
+    checkProcessAndStop -ProcessName "ngrok" # <= in future should replaced by ngrok process name from Variable
 })
 $objForm.Controls.Add($StopButton)
 
@@ -171,15 +172,32 @@ $copyiedLabel.ForeColor = "Green"
 function checkProcessAndStop {
     [CmdletBinding()]
     param (
-        [Parameter()]
-        [int] $ProcessId
+        [Parameter(Mandatory=$false, Position=0)]
+        [int] $ProcessId,
+        [Parameter(Mandatory=$false, Position=1)]
+        [string] $ProcessName
     )
-
-    $minecraftProcess = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
     
-    if ($minecraftProcess) {
-        Stop-Process -Id $global:minecraftServer.Id
-    } else {
-        Write-Host "Minecraft Server has already been closed"
+    # Should both be simplified, I'm currently unsure because of Variable range
+    if ($ProcessId) {
+        $process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+    
+        if ($process) {
+            Stop-Process -Id $ProcessId
+        } else {
+            Write-Host "Process with $ProcessName has already been closed"
+        }
+
+    } elseif ($ProcessName) {
+        $process = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue
+        
+        if ($process) {
+            Stop-Process -Name $ProcessName
+        } else {
+            Write-Host "Process with $ProcessName has already been closed"
+        }
     }
+    
+    
+    
 }
