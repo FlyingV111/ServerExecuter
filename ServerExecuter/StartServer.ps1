@@ -71,13 +71,13 @@ $objForm.Controls.Add($checkbox)
 
 
 $CancelButton = New-Object System.Windows.Forms.Button
-# Die n‰chsten beiden Zeilen legen die Position und die Grˆﬂe des Buttons fest
+# Die n√§chsten beiden Zeilen legen die Position und die Gr√∂√üe des Buttons fest
 $CancelButton.Location = New-Object System.Drawing.Size(20,420)
 $CancelButton.Size = New-Object System.Drawing.Size(75,23)
 $CancelButton.Text = "Abbrechen"
 $CancelButton.Name = "Abbrechen"
 $CancelButton.DialogResult = "Cancel"
-#Die folgende Zeile ordnet dem Click-Event die Schlieﬂen-Funktion f¸r das Formular zu
+#Die folgende Zeile ordnet dem Click-Event die Schlie√üen-Funktion f√ºr das Formular zu
 $CancelButton.Add_Click({
     taskkill /F /IM ngrok.exe
     Stop-Process -Id $global:minecraftServer.ID
@@ -88,12 +88,12 @@ $CancelButton.Add_Click({
 $objForm.Controls.Add($CancelButton)
 
 $StartButton = New-Object System.Windows.Forms.Button
-# Die n‰chsten beiden Zeilen legen die Position und die Grˆﬂe des Buttons fest
+# Die n√§chsten beiden Zeilen legen die Position und die Gr√∂√üe des Buttons fest
 $StartButton.Location = New-Object System.Drawing.Size(695,420)
 $StartButton.Size = New-Object System.Drawing.Size(75,23)
 $StartButton.Text = "Start"
 $StartButton.Name = "Start"
-#Die folgende Zeile ordnet dem Click-Event die Schlieﬂen-Funktion f¸r das Formular zu
+#Die folgende Zeile ordnet dem Click-Event die Schlie√üen-Funktion f√ºr das Formular zu
 $StartButton.Add_Click({
     $batName = $textBoxBat.Text
     $serverPath = $textBoxSelect.Text
