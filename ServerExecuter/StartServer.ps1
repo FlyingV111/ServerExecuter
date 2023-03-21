@@ -1,4 +1,4 @@
-cls
+Clear-Host
 [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
 [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
 
@@ -80,7 +80,7 @@ $CancelButton.DialogResult = "Cancel"
 #Die folgende Zeile ordnet dem Click-Event die Schließen-Funktion für das Formular zu
 $CancelButton.Add_Click({
     taskkill /F /IM ngrok.exe
-    Stop-Process -Id $global:minecraftServer.ID
+    checkProcessAndStop -ProcessId $global:minecraftServer.Id
     $objForm.Close()
     Stop-Job -id $global:ngrokJob.Id
     Remove-Job -id $global:ngrokJob.Id
@@ -97,15 +97,17 @@ $StartButton.Name = "Start"
 $StartButton.Add_Click({
     $batName = $textBoxBat.Text
     $serverPath = $textBoxSelect.Text
-    Write-Host $serverPath
-    Write-Host $batName
-    Set-Location $serverPath
     $global:minecraftServer = Start-Process $batName -passthru
 
+    Write-Host $serverPath
+    Write-Host $batName
+    Write-Host $global:minecraftServer.Id
+    Set-Location $serverPath
+    
     if($checkbox.Checked){
         $global:ngrokJob = Start-Job -ScriptBlock {"start $Using:serverPath\ngrok.exe tcp 25565 --region eu" |  cmd}
 
-        sleep 2
+        Start-Sleep 2
 
         $url = (Invoke-WebRequest -UseBasicParsing -uri "http://localhost:4040/api/tunnels").Content
         $Json= ConvertFrom-Json -InputObject $url
@@ -129,8 +131,9 @@ $StopButton.Text = "Stop"
 $StopButton.Name = "Stop"
 # Adding Click Event-Listener
 $StopButton.Add_Click({
-    # TODO: Add Exception Handling
-    Stop-Process -Id $global:minecraftServer.Id
+    # Check whether process is still running (=> Exception Handling)
+    checkProcessAndStop -ProcessId $global:minecraftServer.Id
+    
     # TODO: Stop-Process -Name "ngrok"
 })
 $objForm.Controls.Add($StopButton)
@@ -151,7 +154,7 @@ $copyButton.Add_Click({
     $url = $ipLabel.Text.trimStart("Ip-Adress:   ")
     Set-Clipboard -Value $url
     $objForm.Controls.Add($copyiedLabel)
-    sleep 2
+    Start-Sleep 2
     $objForm.Controls.Remove($copyiedLabel)
 
 })
@@ -163,3 +166,20 @@ $copyiedLabel.Text = "Copied to the clipboard."
 $copyiedLabel.ForeColor = "Green"
 
 [void] $objForm.ShowDialog()
+
+### Functions ###
+function checkProcessAndStop {
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [int] $ProcessId
+    )
+
+    $minecraftProcess = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+    
+    if ($minecraftProcess) {
+        Stop-Process -Id $global:minecraftServer.Id
+    } else {
+        Write-Host "Minecraft Server has already been closed"
+    }
+}
