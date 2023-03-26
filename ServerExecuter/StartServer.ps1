@@ -2,6 +2,93 @@ Clear-Host
 [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
 [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
 
+$Global:url = $null
+$Global:batName = $null
+$Global:serverPath = $null
+$Global:ngrokJob = $null
+function StartNgrok {
+    $Global:serverPath = $Global:textBoxSelect.Text
+    $ngrok = "$Global:serverPath\ngrok.exe tcp 25565 --region eu"
+    $Global:ngrokJob = Start-Job -ScriptBlock {"start $Using:ngrok" | cmd}
+}
+function SaveIpAdress{
+    if(!$Global:ngrokJob.Error){
+    Start-Sleep 2
+
+    $Global:url = (Invoke-WebRequest -UseBasicParsing -uri "http://localhost:4040/api/tunnels").Content
+    $Json= ConvertFrom-Json -InputObject $Global:url
+    $Global:url = $Json.tunnels.public_url
+    $Global:url = $Global:url.trimStart("tcp://")
+    $Global:ipLabel.Text = "Ip-Adress:   " + $Global:url
+    $Global:objForm.Controls.Add($Global:ipLabel)
+    $Global:objForm.Controls.Add($copyButton)
+    $Global:objForm.Activate()
+    }   
+}
+function SaveIpToClipboard {
+    $Global:url = $Global:ipLabel.Text.trimStart("Ip-Adress:   ")
+    Set-Clipboard -Value $Global:url
+    $Global:objForm.Controls.Add($copyiedLabel)
+    Start-Sleep 2
+    $Global:objForm.Controls.Remove($copyiedLabel)
+}
+function StartServer{
+    $Global:batName = $textBoxBat.Text
+    $Global:serverPath = $Global:textBoxSelect.Text
+    MakeBatFileReadyToStart
+    Set-Location $Global:serverPath
+    $Global:minecraftServer = Start-Process $Global:batName -PassThru
+    if($checkbox.Checked){
+        StartNgrok
+        SaveIpAdress
+    }
+}
+function StopServer{
+    $wsh = New-Object -ComObject WScript.Shell
+    $wsh.AppActivate("StartBat")
+    $wsh.SendKeys("stop")
+    $wsh.SendKeys("{ENTER}")
+    if($checkbox.Checked){
+        StopNgrok
+    }
+}
+function CancelServer{
+    CloseBatWindow
+    $Global:objForm.Close()
+    if($checkbox.Checked){
+        StopNgrok
+    }
+}       
+function SelectPath {
+    $Global:folderBrowser =  New-Object System.Windows.Forms.FolderBrowserDialog
+    if ($Global:folderBrowser.ShowDialog() -eq [System.Windows.Forms.DialogResult]::Ok) {
+        $Global:textBoxSelect.Text = $Global:folderBrowser.SelectedPath
+    }
+}
+function SelectBat {
+    $Global:batBrowser =  New-Object System.Windows.Forms.OpenFileDialog
+    $Global:batBrowser.Filter = "Batch Files (*.bat, *.cmd)|*.bat; *.cmd"
+    if ($Global:batBrowser.ShowDialog() -eq [System.Windows.Forms.DialogResult]::Ok) {
+        $textBoxBat.Text = [System.IO.Path]::GetFileName($Global:batBrowser.FileName)  
+    }
+}
+function StopNgrok {
+    taskkill /F /IM ngrok.exe
+    Stop-Job -id $global:ngrokJob.Id
+    Remove-Job -id $global:ngrokJob.Id
+}
+function CloseBatWindow {
+    taskkill /F /FI "WINDOWTITLE eq StartBat" /T
+}
+function MakeBatFileReadyToStart{
+    if(-not (Select-String -Path $Global:batBrowser.FileName -Pattern "title StartBat"))
+    {
+        $batContent = "title StartBat`n"
+        $batContent = $batContent + (Get-Content $Global:batBrowser.FileName -Raw)
+        Set-Content $Global:batBrowser.FileName $batContent
+    }
+}
+
 $Global:objForm = New-Object System.Windows.Forms.Form
 $Global:objForm.Text = "Server-Management"
 $Global:objForm.StartPosition = "CenterScreen"
@@ -48,11 +135,11 @@ $selectPathBat.Add_Click({
 $Global:objForm.Controls.Add($selectPathBat)
 
 
-$checkbox = New-Object System.Windows.Forms.CheckBox
-$checkbox.Location = New-Object System.Drawing.Point(20, 140)
-$checkbox.Text = "Online-Modus"
-$checkbox.Name = "OnlineMode"
-$Global:objForm.Controls.Add($checkbox)
+$Global:checkbox = New-Object System.Windows.Forms.CheckBox
+$Global:checkbox.Location = New-Object System.Drawing.Point(20, 140)
+$Global:checkbox.Text = "Online-Modus"
+$Global:checkbox.Name = "OnlineMode"
+$Global:objForm.Controls.Add($Global:checkbox)
 
 
 $CancelButton = New-Object System.Windows.Forms.Button
@@ -117,81 +204,3 @@ $copyiedLabel.Text = "Copied to the clipboard."
 $copyiedLabel.ForeColor = "Green"
 
 [void] $Global:objForm.ShowDialog()
-
-function StartNgrok {
-    $global:ngrokJob = Start-Job -ScriptBlock {"start $Using:Global:serverPath\ngrok.exe tcp 25565 --region eu" |  cmd}
-    Write-Host $global:ngrokJob
-}
-function SaveIpAdress{
-    Start-Sleep 2
-
-    $Global:url = (Invoke-WebRequest -UseBasicParsing -uri "http://localhost:4040/api/tunnels").Content
-    $Json= ConvertFrom-Json -InputObject $Global:url
-    $Global:url = $Json.tunnels.public_url
-    $Global:url = $Global:url.trimStart("tcp://")
-    $Global:ipLabel.Text = "Ip-Adress:   " + $Global:url
-    $Global:objForm.Controls.Add($Global:ipLabel)
-    $Global:objForm.Controls.Add($copyButton)
-    $Global:objForm.Activate()
-}
-function SaveIpToClipboard {
-    $Global:url = $Global:ipLabel.Text.trimStart("Ip-Adress:   ")
-    Set-Clipboard -Value $Global:url
-    $Global:objForm.Controls.Add($copyiedLabel)
-    Start-Sleep 2
-    $Global:objForm.Controls.Remove($copyiedLabel)
-}
-function StartServer {
-    $Global:batName = $textBoxBat.Text
-    $Global:serverPath = $Global:textBoxSelect.Text
-    Write-Host $batName
-    $Global:minecraftServer = Start-Process $Global:batName -PassThru
-    Write-Host $Global:minecraftServer
-    Set-Location $Global:serverPath
-    if($checkbox.Checked){
-        StartNgrok
-        SaveIpAdress
-    }
-}
-function StopServer {
-    StopNgrok
-    $wsh = New-Object -ComObject WScript.Shell
-    $wsh.AppActivate("StartBat")
-    $wsh.SendKeys("stop")
-    $wsh.SendKeys("{ENTER}")
-}
-function CancelServer {
-    CloseBatWindow
-    $Global:objForm.Close()
-    if($checkbox.Checked){
-        StopNgrok
-    }
-}
-function SelectPath {
-    $Global:folderBrowser =  New-Object System.Windows.Forms.FolderBrowserDialog
-    if ($Global:folderBrowser.ShowDialog() -eq [System.Windows.Forms.DialogResult]::Ok) {
-        $Global:textBoxSelect.Text = $Global:folderBrowser.SelectedPath
-    }
-}
-function SelectBat {
-    $Global:batBrowser =  New-Object System.Windows.Forms.OpenFileDialog
-    $Global:batBrowser.Filter = "Batch Files (*.bat, *.cmd)|*.bat; *.cmd"
-    if ($Global:batBrowser.ShowDialog() -eq [System.Windows.Forms.DialogResult]::Ok) {
-        $textBoxBat.Text = [System.IO.Path]::GetFileName($Global:batBrowser.FileName)  
-    }
-    MakeBatFileReadyToStart
-}
-function StopNgrok {
-    taskkill /F /IM ngrok.exe
-    Stop-Job -id $global:ngrokJob.Id
-    Remove-Job -id $global:ngrokJob.Id
-}
-function CloseBatWindow {
-    taskkill /F /FI "WINDOWTITLE eq StartBat" /T
-}
-
-function MakeBatFileReadyToStart{
-    Write-Host $Global:batBrowser.FileName
-    #$batText = Get-Content $Global:batBrowser.Title
-    Write-Host $batText
-}
