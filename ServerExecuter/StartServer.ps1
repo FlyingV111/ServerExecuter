@@ -1,11 +1,30 @@
 Clear-Host
 [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
 [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
-
-$Global:url = $null
-$Global:batName = $null
-$Global:serverPath = $null
-$Global:ngrokJob = $null
+ 
+function CheckIfJsonExistAndLoadIt{
+    $scriptPath = $PSScriptRoot
+    $Global:ConfigFileLocation = $scriptPath + "\Configs"
+    if(!(Test-Path $Global:ConfigFileLocation -PathType Container)){
+        New-Item -Path $Global:ConfigFileLocation -ItemType Directory
+    }else
+    {
+        Write-Host "Exist"
+    }
+    $AbsoluteConfigLocation = $Global:ConfigFileLocation + "\config.json"
+    Write-Host "Location:"
+    Write-Host $AbsoluteConfigLocation
+    if(Test-Path $AbsoluteConfigLocation){
+        $configString = Get-Content -Raw -Path $AbsoluteConfigLocation
+        $configObject = ConvertFrom-Json -InputObject $configString
+        $Global:serverPath = $configObject.ServerPath
+        $Global:batName = $configObject.BatName
+    }else
+    {
+        $Global:batName = $null
+        $Global:serverPath = $null
+    } 
+}
 function StartNgrok {
     $Global:serverPath = $Global:textBoxSelect.Text
     $ngrok = "$Global:serverPath\ngrok.exe tcp 25565 --region eu"
@@ -88,6 +107,62 @@ function MakeBatFileReadyToStart{
         Set-Content $Global:batBrowser.FileName $batContent
     }
 }
+function SaveConfig{
+    $Global:batName = $textBoxBat.Text
+    $Global:serverPath = $Global:textBoxSelect.Text
+    $saveJson = @{
+        ServerPath = $Global:serverPath
+        BatName = $Global:batName
+    }
+    $ConvertedJson = ConvertTo-Json $saveJson | Out-File $Global:ConfigFileLocation\config.json
+    Write-Host "Saved"
+}
+function WantToSave{
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "Save before closing?"
+    $form.StartPosition = "CenterScreen"
+    $form.AutoSizeMode = 'GrowAndShrink'
+    $form.AutoSize = $true
+
+    # Create a label
+    $label = New-Object System.Windows.Forms.Label
+    $label.Location = New-Object System.Drawing.Point(10, 10)
+    $label.Size = New-Object System.Drawing.Size(200, 20)
+    $label.Text = "Do you want to save before closing?"
+    $form.Controls.Add($label)
+
+    # Create a Yes button
+    $yesButton = New-Object System.Windows.Forms.Button
+    $yesButton.Location = New-Object System.Drawing.Point(10, 40)
+    $yesButton.Size = New-Object System.Drawing.Size(75, 23)
+    $yesButton.Text = "Yes"
+    $yesButton.DialogResult = [System.Windows.Forms.DialogResult]::Yes
+    $form.Controls.Add($yesButton)
+
+    # Create a No button
+    $noButton = New-Object System.Windows.Forms.Button
+    $noButton.Location = New-Object System.Drawing.Point(90, 40)
+    $noButton.Size = New-Object System.Drawing.Size(75, 23)
+    $noButton.Text = "No"
+    $noButton.DialogResult = [System.Windows.Forms.DialogResult]::No
+    $form.Controls.Add($noButton)
+
+    # Show the form and prompt the user
+    $result = $form.ShowDialog()
+
+    # Check if the user clicked the Yes button
+    if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
+        SaveConfig
+        $form.Dispose()
+    }
+
+    # Close the form
+    $form.Dispose()
+}
+CheckIfJsonExistAndLoadIt
+
+$Global:url = $null
+$Global:ngrokJob = $null
 
 $Global:objForm = New-Object System.Windows.Forms.Form
 $Global:objForm.Text = "Server-Management"
@@ -103,12 +178,13 @@ $Global:objForm.Controls.Add($objLabel)
 $Global:textBoxSelect = New-Object System.Windows.Forms.TextBox
 $Global:textBoxSelect.Location = New-Object System.Drawing.Size(20,40)
 $Global:textBoxSelect.Size = New-Object System.Drawing.Size(200,20)
+$Global:textBoxSelect.Text = $Global:serverPath
 $Global:objForm.Controls.Add($Global:textBoxSelect)
 
 $selectPath = New-Object System.Windows.Forms.Button
 $selectPath.Location = New-Object System.Drawing.Size(225,39)
 $selectPath.Size = New-Object System.Drawing.Size(30,22)
-$selectPath.Text = "..."
+$selectPath.Text = ".."
 $selectPath.Add_Click({
     SelectPath
 })
@@ -123,6 +199,7 @@ $Global:objForm.Controls.Add($objLabel)
 $textBoxBat = New-Object System.Windows.Forms.TextBox
 $textBoxBat.Location = New-Object System.Drawing.Size(20,99)
 $textBoxBat.Size = New-Object System.Drawing.Size(200,20)
+$textBoxBat.Text = $Global:batName
 $Global:objForm.Controls.Add($textBoxBat)
 
 $selectPathBat = New-Object System.Windows.Forms.Button
@@ -151,7 +228,7 @@ $CancelButton.Name = "Abbrechen"
 $CancelButton.DialogResult = "Cancel"
 #Die folgende Zeile ordnet dem Click-Event die Schließen-Funktion für das Formular zu
 $CancelButton.Add_Click({
-    CancelServer
+    WantToSave
 })
 $Global:objForm.Controls.Add($CancelButton)
 
@@ -181,6 +258,19 @@ $StopButton.Add_Click({
 })
 $Global:objForm.Controls.Add($StopButton)
 
+
+$SaveConfigButton = New-Object System.Windows.Forms.Button
+# Setting Position
+$SaveConfigButton.Location = New-Object System.Drawing.Size(695, 20)
+# Setting Size
+$SaveConfigButton.Size = New-Object System.Drawing.Size(75, 23)
+$SaveConfigButton.Text = "Save Config"
+$SaveConfigButton.Name = "Save Config"
+# Adding Click Event-Listener
+$SaveConfigButton.Add_Click({
+    SaveConfig
+})
+$Global:objForm.Controls.Add($SaveConfigButton)
 # Simply shut down ngrok => Stop-Process -Name "ngrok" (all processes of ngrok will be stopped)
 # Getting PID's (Process ID) of started tasks (tasks because ngrok starts usually more than one task)
 
