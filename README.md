@@ -12,4 +12,7 @@ reporting bugs, etc...
 - [Minecraft Server .jar - File](https://www.minecraft.net/de-de/download/server) 
 - [Ngrok to play together](https://ngrok.com/download)
 
+## WICHTIG !!!
+
+Füge zu .bat "title StartBat" oben hinzu 1st Zeile
 

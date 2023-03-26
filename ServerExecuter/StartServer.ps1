@@ -2,72 +2,57 @@ Clear-Host
 [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
 [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
 
-$iconPath = ".\server.ico"
-$folderPath = "Logo"
-$serverPath = ""
-$batName = ""
-$url = ""
-
-$objForm = New-Object System.Windows.Forms.Form
-$objForm.Text = "Server-Management"
-$objForm.StartPosition = "CenterScreen"
-$objForm.Size = New-Object System.Drawing.Size(800,500)
+$Global:objForm = New-Object System.Windows.Forms.Form
+$Global:objForm.Text = "Server-Management"
+$Global:objForm.StartPosition = "CenterScreen"
+$Global:objForm.Size = New-Object System.Drawing.Size(800,500)
 
 $objLabel = New-Object System.Windows.Forms.Label
 $objLabel.Location = New-Object System.Drawing.Size(20,20)
 $objLabel.Size = New-Object System.Drawing.Size(200,20)
 $objLabel.Text = "Server-Ordner Path :"
-$objForm.Controls.Add($objLabel)
+$Global:objForm.Controls.Add($objLabel)
 
-$textBoxSelect = New-Object System.Windows.Forms.TextBox
-$textBoxSelect.Location = New-Object System.Drawing.Size(20,40)
-$textBoxSelect.Size = New-Object System.Drawing.Size(200,20)
-$objForm.Controls.Add($textBoxSelect)
+$Global:textBoxSelect = New-Object System.Windows.Forms.TextBox
+$Global:textBoxSelect.Location = New-Object System.Drawing.Size(20,40)
+$Global:textBoxSelect.Size = New-Object System.Drawing.Size(200,20)
+$Global:objForm.Controls.Add($Global:textBoxSelect)
 
 $selectPath = New-Object System.Windows.Forms.Button
 $selectPath.Location = New-Object System.Drawing.Size(225,39)
 $selectPath.Size = New-Object System.Drawing.Size(30,22)
 $selectPath.Text = "..."
 $selectPath.Add_Click({
-    $folderBrowser =  New-Object System.Windows.Forms.FolderBrowserDialog
-    if ($folderBrowser.ShowDialog() -eq [System.Windows.Forms.DialogResult]::Ok) {
-        $textBoxSelect.Text = $folderBrowser.SelectedPath
-    }
-
+    SelectPath
 })
-$objForm.Controls.Add($selectPath)
+$Global:objForm.Controls.Add($selectPath)
 
 $objLabel = New-Object System.Windows.Forms.Label
 $objLabel.Location = New-Object System.Drawing.Size(20,79)
 $objLabel.Size = New-Object System.Drawing.Size(200,20)
 $objLabel.Text = "Server-Run Bat:"
-$objForm.Controls.Add($objLabel)
+$Global:objForm.Controls.Add($objLabel)
 
 $textBoxBat = New-Object System.Windows.Forms.TextBox
 $textBoxBat.Location = New-Object System.Drawing.Size(20,99)
 $textBoxBat.Size = New-Object System.Drawing.Size(200,20)
-$objForm.Controls.Add($textBoxBat)
+$Global:objForm.Controls.Add($textBoxBat)
 
 $selectPathBat = New-Object System.Windows.Forms.Button
 $selectPathBat.Location = New-Object System.Drawing.Size(225,99)
 $selectPathBat.Size = New-Object System.Drawing.Size(30,22)
 $selectPathBat.Text = "..."
 $selectPathBat.Add_Click({
-    $batBrowser =  New-Object System.Windows.Forms.OpenFileDialog
-    $batBrowser.Filter = "Batch Files (*.bat, *.cmd)|*.bat; *.cmd"
-    if ($batBrowser.ShowDialog() -eq [System.Windows.Forms.DialogResult]::Ok) {
-        $textBoxBat.Text = [System.IO.Path]::GetFileName($batBrowser.FileName)
-    }
-
+    SelectBat
 })
-$objForm.Controls.Add($selectPathBat)
+$Global:objForm.Controls.Add($selectPathBat)
 
 
 $checkbox = New-Object System.Windows.Forms.CheckBox
 $checkbox.Location = New-Object System.Drawing.Point(20, 140)
 $checkbox.Text = "Online-Modus"
 $checkbox.Name = "OnlineMode"
-$objForm.Controls.Add($checkbox)
+$Global:objForm.Controls.Add($checkbox)
 
 
 $CancelButton = New-Object System.Windows.Forms.Button
@@ -79,13 +64,9 @@ $CancelButton.Name = "Abbrechen"
 $CancelButton.DialogResult = "Cancel"
 #Die folgende Zeile ordnet dem Click-Event die Schließen-Funktion für das Formular zu
 $CancelButton.Add_Click({
-    taskkill /F /IM ngrok.exe
-    checkProcessAndStop -ProcessId $global:minecraftServer.Id
-    $objForm.Close()
-    Stop-Job -id $global:ngrokJob.Id
-    Remove-Job -id $global:ngrokJob.Id
+    CancelServer
 })
-$objForm.Controls.Add($CancelButton)
+$Global:objForm.Controls.Add($CancelButton)
 
 $StartButton = New-Object System.Windows.Forms.Button
 # Die nächsten beiden Zeilen legen die Position und die Größe des Buttons fest
@@ -95,32 +76,9 @@ $StartButton.Text = "Start"
 $StartButton.Name = "Start"
 #Die folgende Zeile ordnet dem Click-Event die Schließen-Funktion für das Formular zu
 $StartButton.Add_Click({
-    $batName = $textBoxBat.Text
-    $serverPath = $textBoxSelect.Text
-    $global:minecraftServer = Start-Process $batName -passthru
-
-    Write-Host $serverPath
-    Write-Host $batName
-    Write-Host $global:minecraftServer.Id
-    Set-Location $serverPath
-    
-    if($checkbox.Checked){
-        Write-Host "Currently here"
-        $global:ngrokJob = Start-Job -ScriptBlock {"start $Using:serverPath\ngrok.exe tcp 25565 --region eu" |  cmd}
-
-        Start-Sleep 2
-
-        $url = (Invoke-WebRequest -UseBasicParsing -uri "http://localhost:4040/api/tunnels").Content
-        $Json= ConvertFrom-Json -InputObject $url
-        $url = $Json.tunnels.public_url
-        $url = $url.trimStart("tcp://")
-        $ipLabel.Text = "Ip-Adress:   " + $url
-        $objForm.Controls.Add($ipLabel)
-        $objForm.Controls.Add($copyButton)
-        $objForm.Activate()
-    }
+    StartServer
 })
-$objForm.Controls.Add($StartButton)
+$Global:objForm.Controls.Add($StartButton)
 
 
 $StopButton = New-Object System.Windows.Forms.Button
@@ -132,19 +90,16 @@ $StopButton.Text = "Stop"
 $StopButton.Name = "Stop"
 # Adding Click Event-Listener
 $StopButton.Add_Click({
-    # Check whether process is still running (=> Exception Handling)
-    checkProcessAndStop -ProcessId $global:minecraftServer.Id
-    
-    checkProcessAndStop -ProcessName "ngrok" # <= in future should replaced by ngrok process name from Variable
+    StopServer
 })
-$objForm.Controls.Add($StopButton)
+$Global:objForm.Controls.Add($StopButton)
 
 # Simply shut down ngrok => Stop-Process -Name "ngrok" (all processes of ngrok will be stopped)
 # Getting PID's (Process ID) of started tasks (tasks because ngrok starts usually more than one task)
 
-$ipLabel = New-Object System.Windows.Forms.Label
-$ipLabel.Location = New-Object System.Drawing.Size(280,425)
-$ipLabel.Size = New-Object System.Drawing.Size(200,20)
+$Global:ipLabel = New-Object System.Windows.Forms.Label
+$Global:ipLabel.Location = New-Object System.Drawing.Size(280,425)
+$Global:ipLabel.Size = New-Object System.Drawing.Size(200,20)
 
 $copyButton = New-Object System.Windows.Forms.Button
 $copyButton.Location = New-Object System.Drawing.Size(480,420)
@@ -152,12 +107,7 @@ $copyButton.Size = New-Object System.Drawing.Size(75,23)
 $copyButton.Text = "Copy"
 $copyButton.Name = "Copy"
 $copyButton.Add_Click({
-    $url = $ipLabel.Text.trimStart("Ip-Adress:   ")
-    Set-Clipboard -Value $url
-    $objForm.Controls.Add($copyiedLabel)
-    Start-Sleep 2
-    $objForm.Controls.Remove($copyiedLabel)
-
+    SaveIpToClipboard
 })
 
 $copyiedLabel = New-Object System.Windows.Forms.Label
@@ -166,38 +116,82 @@ $copyiedLabel.Size = New-Object System.Drawing.Size(200,20)
 $copyiedLabel.Text = "Copied to the clipboard."
 $copyiedLabel.ForeColor = "Green"
 
-[void] $objForm.ShowDialog()
+[void] $Global:objForm.ShowDialog()
 
-### Functions ###
-function checkProcessAndStop {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory=$false, Position=0)]
-        [int] $ProcessId,
-        [Parameter(Mandatory=$false, Position=1)]
-        [string] $ProcessName
-    )
-    
-    # Should both be simplified, I'm currently unsure because of Variable range
-    if ($ProcessId) {
-        $process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
-    
-        if ($process) {
-            Stop-Process -Id $ProcessId
-        } else {
-            Write-Host "Process with $ProcessName has already been closed"
-        }
+function StartNgrok {
+    $global:ngrokJob = Start-Job -ScriptBlock {"start $Using:Global:serverPath\ngrok.exe tcp 25565 --region eu" |  cmd}
+    Write-Host $global:ngrokJob
+}
+function SaveIpAdress{
+    Start-Sleep 2
 
-    } elseif ($ProcessName) {
-        $process = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue
-        
-        if ($process) {
-            Stop-Process -Name $ProcessName
-        } else {
-            Write-Host "Process with $ProcessName has already been closed"
-        }
+    $Global:url = (Invoke-WebRequest -UseBasicParsing -uri "http://localhost:4040/api/tunnels").Content
+    $Json= ConvertFrom-Json -InputObject $Global:url
+    $Global:url = $Json.tunnels.public_url
+    $Global:url = $Global:url.trimStart("tcp://")
+    $Global:ipLabel.Text = "Ip-Adress:   " + $Global:url
+    $Global:objForm.Controls.Add($Global:ipLabel)
+    $Global:objForm.Controls.Add($copyButton)
+    $Global:objForm.Activate()
+}
+function SaveIpToClipboard {
+    $Global:url = $Global:ipLabel.Text.trimStart("Ip-Adress:   ")
+    Set-Clipboard -Value $Global:url
+    $Global:objForm.Controls.Add($copyiedLabel)
+    Start-Sleep 2
+    $Global:objForm.Controls.Remove($copyiedLabel)
+}
+function StartServer {
+    $Global:batName = $textBoxBat.Text
+    $Global:serverPath = $Global:textBoxSelect.Text
+    Write-Host $batName
+    $Global:minecraftServer = Start-Process $Global:batName -PassThru
+    Write-Host $Global:minecraftServer
+    Set-Location $Global:serverPath
+    if($checkbox.Checked){
+        StartNgrok
+        SaveIpAdress
     }
-    
-    
-    
+}
+function StopServer {
+    StopNgrok
+    $wsh = New-Object -ComObject WScript.Shell
+    $wsh.AppActivate("StartBat")
+    $wsh.SendKeys("stop")
+    $wsh.SendKeys("{ENTER}")
+}
+function CancelServer {
+    CloseBatWindow
+    $Global:objForm.Close()
+    if($checkbox.Checked){
+        StopNgrok
+    }
+}
+function SelectPath {
+    $Global:folderBrowser =  New-Object System.Windows.Forms.FolderBrowserDialog
+    if ($Global:folderBrowser.ShowDialog() -eq [System.Windows.Forms.DialogResult]::Ok) {
+        $Global:textBoxSelect.Text = $Global:folderBrowser.SelectedPath
+    }
+}
+function SelectBat {
+    $Global:batBrowser =  New-Object System.Windows.Forms.OpenFileDialog
+    $Global:batBrowser.Filter = "Batch Files (*.bat, *.cmd)|*.bat; *.cmd"
+    if ($Global:batBrowser.ShowDialog() -eq [System.Windows.Forms.DialogResult]::Ok) {
+        $textBoxBat.Text = [System.IO.Path]::GetFileName($Global:batBrowser.FileName)  
+    }
+    MakeBatFileReadyToStart
+}
+function StopNgrok {
+    taskkill /F /IM ngrok.exe
+    Stop-Job -id $global:ngrokJob.Id
+    Remove-Job -id $global:ngrokJob.Id
+}
+function CloseBatWindow {
+    taskkill /F /FI "WINDOWTITLE eq StartBat" /T
+}
+
+function MakeBatFileReadyToStart{
+    Write-Host $Global:batBrowser.FileName
+    #$batText = Get-Content $Global:batBrowser.Title
+    Write-Host $batText
 }
