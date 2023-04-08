@@ -175,6 +175,9 @@ $Global:objForm = New-Object System.Windows.Forms.Form
 $Global:objForm.Text = "Server-Management"
 $Global:objForm.StartPosition = "CenterScreen"
 $Global:objForm.Size = New-Object System.Drawing.Size(410,240)
+$Global:objForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedSingle
+$Global:objForm.MaximizeBox = $false
+$Global:objForm.MinimizeBox = $false
 
 $objLabel = New-Object System.Windows.Forms.Label
 $objLabel.Location = New-Object System.Drawing.Size(20,20)
