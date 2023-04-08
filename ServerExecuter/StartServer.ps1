@@ -45,11 +45,18 @@ function SaveIpAdress{
     }   
 }
 function SaveIpToClipboard {
-    $Global:url = $Global:ipLabel.Text.trimStart("Ip-Adress:   ")
+    if($Global:url){
     Set-Clipboard -Value $Global:url
     $Global:objForm.Controls.Add($copyiedLabel)
     Start-Sleep 2
     $Global:objForm.Controls.Remove($copyiedLabel)
+    }
+    else {
+        $Global:objForm.Controls.Remove($copyiedLabel)
+        $Global:objForm.Controls.Add($errorCopiedLabel)
+        Start-Sleep 2
+        $Global:objForm.Controls.Remove($errorCopiedLabel)
+    }
 }
 function StartServer{
     $Global:batName = $textBoxBat.Text
@@ -277,6 +284,7 @@ $Global:objForm.Controls.Add($SaveConfigButton)
 $Global:ipLabel = New-Object System.Windows.Forms.Label
 $Global:ipLabel.Location = New-Object System.Drawing.Size(110,140)
 $Global:ipLabel.Size = New-Object System.Drawing.Size(200,20)
+$Global:ipLabel.Text = "Ip-Adress:"
 
 $copyButton = New-Object System.Windows.Forms.Button
 $copyButton.Location = New-Object System.Drawing.Size(310, 135)
@@ -293,5 +301,11 @@ $copyiedLabel.Location = New-Object System.Drawing.Size(100,175)
 $copyiedLabel.Size = New-Object System.Drawing.Size(200,20)
 $copyiedLabel.Text = "Copied to the clipboard."
 $copyiedLabel.ForeColor = "Green"
+
+$errorCopiedLabel = New-Object System.Windows.Forms.Label
+$errorCopiedLabel.Location = New-Object System.Drawing.Size(100,175)
+$errorCopiedLabel.Size = New-Object System.Drawing.Size(200,20)
+$errorCopiedLabel.Text = "Error while copying !!"
+$errorCopiedLabel.ForeColor = "Red"
 
 [void] $Global:objForm.ShowDialog()
