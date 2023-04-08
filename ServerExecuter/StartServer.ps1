@@ -167,7 +167,7 @@ $Global:ngrokJob = $null
 $Global:objForm = New-Object System.Windows.Forms.Form
 $Global:objForm.Text = "Server-Management"
 $Global:objForm.StartPosition = "CenterScreen"
-$Global:objForm.Size = New-Object System.Drawing.Size(800,500)
+$Global:objForm.Size = New-Object System.Drawing.Size(410,240)
 
 $objLabel = New-Object System.Windows.Forms.Label
 $objLabel.Location = New-Object System.Drawing.Size(20,20)
@@ -213,7 +213,7 @@ $Global:objForm.Controls.Add($selectPathBat)
 
 
 $Global:checkbox = New-Object System.Windows.Forms.CheckBox
-$Global:checkbox.Location = New-Object System.Drawing.Point(20, 140)
+$Global:checkbox.Location = New-Object System.Drawing.Point(20, 135)
 $Global:checkbox.Text = "Online-Modus"
 $Global:checkbox.Name = "OnlineMode"
 $Global:objForm.Controls.Add($Global:checkbox)
@@ -221,7 +221,7 @@ $Global:objForm.Controls.Add($Global:checkbox)
 
 $CancelButton = New-Object System.Windows.Forms.Button
 # Die nächsten beiden Zeilen legen die Position und die Größe des Buttons fest
-$CancelButton.Location = New-Object System.Drawing.Size(20,420)
+$CancelButton.Location = New-Object System.Drawing.Size(15,170)
 $CancelButton.Size = New-Object System.Drawing.Size(75,23)
 $CancelButton.Text = "Abbrechen"
 $CancelButton.Name = "Abbrechen"
@@ -234,7 +234,7 @@ $Global:objForm.Controls.Add($CancelButton)
 
 $StartButton = New-Object System.Windows.Forms.Button
 # Die nächsten beiden Zeilen legen die Position und die Größe des Buttons fest
-$StartButton.Location = New-Object System.Drawing.Size(695,420)
+$StartButton.Location = New-Object System.Drawing.Size(310,170)
 $StartButton.Size = New-Object System.Drawing.Size(75,23)
 $StartButton.Text = "Start"
 $StartButton.Name = "Start"
@@ -247,7 +247,7 @@ $Global:objForm.Controls.Add($StartButton)
 
 $StopButton = New-Object System.Windows.Forms.Button
 # Setting Position
-$StopButton.Location = New-Object System.Drawing.Size(595, 420)
+$StopButton.Location = New-Object System.Drawing.Size(230, 170)
 # Setting Size
 $StopButton.Size = New-Object System.Drawing.Size(75, 23)
 $StopButton.Text = "Stop"
@@ -261,7 +261,7 @@ $Global:objForm.Controls.Add($StopButton)
 
 $SaveConfigButton = New-Object System.Windows.Forms.Button
 # Setting Position
-$SaveConfigButton.Location = New-Object System.Drawing.Size(695, 20)
+$SaveConfigButton.Location = New-Object System.Drawing.Size(310, 40)
 # Setting Size
 $SaveConfigButton.Size = New-Object System.Drawing.Size(75, 23)
 $SaveConfigButton.Text = "Save Config"
@@ -275,20 +275,21 @@ $Global:objForm.Controls.Add($SaveConfigButton)
 # Getting PID's (Process ID) of started tasks (tasks because ngrok starts usually more than one task)
 
 $Global:ipLabel = New-Object System.Windows.Forms.Label
-$Global:ipLabel.Location = New-Object System.Drawing.Size(280,425)
+$Global:ipLabel.Location = New-Object System.Drawing.Size(110,140)
 $Global:ipLabel.Size = New-Object System.Drawing.Size(200,20)
 
 $copyButton = New-Object System.Windows.Forms.Button
-$copyButton.Location = New-Object System.Drawing.Size(480,420)
+$copyButton.Location = New-Object System.Drawing.Size(310, 135)
 $copyButton.Size = New-Object System.Drawing.Size(75,23)
 $copyButton.Text = "Copy"
 $copyButton.Name = "Copy"
 $copyButton.Add_Click({
     SaveIpToClipboard
 })
+$Global:objForm.Controls.Add($copyButton)
 
 $copyiedLabel = New-Object System.Windows.Forms.Label
-$copyiedLabel.Location = New-Object System.Drawing.Size(350,400)
+$copyiedLabel.Location = New-Object System.Drawing.Size(100,175)
 $copyiedLabel.Size = New-Object System.Drawing.Size(200,20)
 $copyiedLabel.Text = "Copied to the clipboard."
 $copyiedLabel.ForeColor = "Green"
